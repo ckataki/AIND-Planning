@@ -61,6 +61,18 @@ class AirCargoProblem(Problem):
             """
             loads = []
             # TODO create all load ground actions from the domain Load action
+            for airport in self.airports:
+                for plane in self.planes:
+                    for cargo in self.cargos:
+                            precond_pos = [expr("At({}, {})".format(cargo, airport)),
+                                            expr("At({}, {})".format(plane, airport))]
+                            precond_neg = [expr("In({}, {})".format(cargo, plane))]
+                            effect_add = [expr("In({}, {})".format(cargo, plane))]
+                            effect_rem = [expr("At({}, {})".format(cargo, airport))]
+                            load = Action(expr("Load({}, {}, {})".format(cargo, plane, airport)),
+                                         [precond_pos, precond_neg],
+                                         [effect_add, effect_rem])
+                            loads.append(load)
             return loads
 
         def unload_actions():
@@ -70,6 +82,18 @@ class AirCargoProblem(Problem):
             """
             unloads = []
             # TODO create all Unload ground actions from the domain Unload action
+            for airport in self.airports:
+                for plane in self.planes:
+                    for cargo in self.cargos:
+                            precond_pos = [expr("In({}, {})".format(cargo, plane)),
+                                            expr("At({}, {})".format(plane, airport))]
+                            precond_neg = []
+                            effect_add = [expr("At({}, {})".format(cargo, airport))]
+                            effect_rem = [expr("In({}, {})".format(cargo, plane))]
+                            unload = Action(expr("Unload({}, {}, {})".format(cargo, plane, airport)),
+                                         [precond_pos, precond_neg],
+                                         [effect_add, effect_rem])
+                            unloads.append(unload)
             return unloads
 
         def fly_actions():
@@ -105,6 +129,11 @@ class AirCargoProblem(Problem):
         """
         # TODO implement
         possible_actions = []
+        kb = PropKB()
+        kb.tell(decode_state(state, self.state_map).sentence())
+        for action in self.actions_list:
+            if action.check_precond(kb, action.args):
+                possible_actions.append(action)
         return possible_actions
 
     def result(self, state: str, action: Action):
@@ -118,6 +147,14 @@ class AirCargoProblem(Problem):
         """
         # TODO implement
         new_state = FluentState([], [])
+        possible_actions = self.actions(state)
+        if action not in possible_actions:
+            return encode_state(state, self.state_map)
+
+        kb = PropKB()
+        kb.tell(decode_state(state, self.state_map).sentence())
+        action(kb, action.args)
+
         return encode_state(new_state, self.state_map)
 
     def goal_test(self, state: str) -> bool:
